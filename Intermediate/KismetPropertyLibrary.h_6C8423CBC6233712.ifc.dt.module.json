@@ -1,0 +1,23 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "..\\Intermediate\\KismetPropertyLibrary.obj",
+            "outputs": [
+                "..\\Intermediate\\KismetPropertyLibrary.h_6C8423CBC6233712.ifc.dt.module.json",
+                "..\\Intermediate\\KismetPropertyLibrary.h_6C8423CBC6233712.ifc.dt.d.json",
+                "..\\Intermediate\\KismetPropertyLibrary.h.ifc",
+                "..\\Intermediate\\FortSDK.pch"
+            ],
+            "provides": [
+                {
+                    "logical-name": "D:\\Projects\\FortSDK\\FortSDK\\include\\sdk\\KismetPropertyLibrary.h",
+                    "source-path": "d:\\projects\\fortsdk\\fortsdk\\include\\sdk\\kismetpropertylibrary.h",
+                    "lookup-method": "absolute"
+                }
+            ],
+            "requires": []
+        }
+    ]
+}

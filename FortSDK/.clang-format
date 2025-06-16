@@ -1,0 +1,13 @@
+# Format Style Options - Created with Clang Power Tools
+---
+BasedOnStyle: LLVM
+IndentWidth: 8
+TabWidth: 4
+UseTab: Never
+
+BraceWrapping:
+  AfterFunction: false
+  AfterClass: true
+
+SpacesInParentheses: true
+...
