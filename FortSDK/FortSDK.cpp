@@ -226,10 +226,10 @@ bool SDK::Init() {
         
         logLibrary->Log_Internal(
             "EngineVersion: %s",
-            SDK::Engine_Version.ToString().ToString().c_str() );
+            SDK::Engine_Version.ToString().c_str() );
         logLibrary->Log_Internal(
             "FortniteVersion: %s",
-            SDK::Fortnite_Version.ToString().ToString().c_str() );
+            SDK::Fortnite_Version.ToString().c_str() );
 
         /*
         * ------------------------
