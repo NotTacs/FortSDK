@@ -1,6 +1,26 @@
 #include "pch.h"
 #include "../../include/SDK.h"
 
+int SDK::FKismetPropertyManager::GetOffset() {
+        if ( !Prop )
+                return 0;
+        if ( UEChanges::bUsesFPropertySystem ) {
+                if ( UEChanges::bUsesUE5FProp ) {
+                        SDK::FProperty500 *Prop = static_cast<SDK::FProperty500*>(this->Prop);
+                        return Prop->Offset_Internal();
+                }
+                SDK::FProperty *Prop =
+                    static_cast<SDK::FProperty *>( this->Prop );
+                return Prop->Offset_Internal;
+        } else {
+                SDK::UProperty *Prop =
+                    static_cast<SDK::UProperty *>( this->Prop );
+                return Prop->Offset_Internal;
+        }
+
+        return 0;
+}
+
 SDK::FPropertyInfo SDK::FKismetPropertyLibrary::GetPropertyByName(const std::string& ClassName,
     const std::string& PropName)
 {
@@ -24,6 +44,8 @@ SDK::FPropertyInfo SDK::FKismetPropertyLibrary::GetPropertyByName(const std::str
 
         void *result = nullptr;
         UClass *Class = StaticClassImpl( ClassName.c_str() );
+
+
         if ( UEChanges::bUsesFPropertySystem ) {
                 if ( UEChanges::bUsesUE5FProp ) {
                         SDK::FProperty500 *Prop = nullptr;
@@ -129,14 +151,10 @@ SDK::FPropertyInfo SDK::FKismetPropertyLibrary::GetPropertyByName(const std::str
         }
 
         Info.Prop = result;
+        std::unique_ptr<FKismetPropertyManager> Manager =
+            std::make_unique<FKismetPropertyManager>( Info.Prop );
 
-        if ( UEChanges::bUsesFPropertySystem )
-                Info.Offset = UEChanges::bUsesUE5FProp ?
-                    static_cast<FProperty500 *>( Info.Prop )->Offset_Internal() :
-                    static_cast<FProperty *>( Info.Prop )->Offset_Internal;
-        else
-                Info.Offset =
-                    static_cast<UProperty *>( Info.Prop )->Offset_Internal;
+        Info.Offset = Manager->GetOffset();
 
         AllPropertyInfo.push_back( Info );
         return Info;
