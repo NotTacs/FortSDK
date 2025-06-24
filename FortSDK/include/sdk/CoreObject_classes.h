@@ -1388,43 +1388,51 @@ static void SetBool( void *Obj, const SDK::UBoolProperty *Prop, bool b ) {
                 }                                                              \
         }
 
-#define DEFINE_MEMBER(Ret,ClassName, PropName) \
-inline Ret& Get##PropName() { \
-static int PropOffset = -1; \
-if (PropOffset == -1 ) {                                 \
-    PropOffset = SDK::PropLibrary->GetPropertyByName(        \
-                    ( #ClassName + 1 ), #PropName ).Offset; \
-} \
-return *reinterpret_cast<Ret *>( uintptr_t( this ) + PropOffset);\
-}\
-inline void Set##PropName(Ret Value) { \
-static int PropOffset = -1;                            \
-                        if ( PropOffset == -1 ) {                              \
-                                PropOffset =                                   \
-                                    SDK::PropLibrary                           \
-                                        ->GetPropertyByName(                   \
-                                            ( #ClassName + 1 ), #PropName )    \
-                                        .Offset;                               \
-                        }                                                      \
-                        *reinterpret_cast<Ret *>( uintptr_t( this ) +   \
-                                                         PropOffset ) = Value;         \
-                } \
-}
+#define DEFINE_MEMBER( Ret, ClassName, PropName )                              \
+        inline Ret &Get##PropName() {                                          \
+                static int PropOffset = -1;                                    \
+                if ( PropOffset == -1 ) {                                      \
+                        PropOffset = SDK::PropLibrary                          \
+                                         ->GetPropertyByName(                  \
+                                             ( #ClassName + 1 ), #PropName )   \
+                                         .Offset;                              \
+                }                                                              \
+                return *reinterpret_cast<Ret *>( uintptr_t( this ) +           \
+                                                 PropOffset );                 \
+        }                                                                      \
+        inline void Set##PropName( Ret Value ) {                               \
+                static int PropOffset = -1;                                    \
+                if ( PropOffset == -1 ) {                                      \
+                        PropOffset = SDK::PropLibrary                          \
+                                         ->GetPropertyByName(                  \
+                                             ( #ClassName + 1 ), #PropName )   \
+                                         .Offset;                              \
+                }                                                              \
+                *reinterpret_cast<Ret *>( uintptr_t( this ) + PropOffset ) =   \
+                    Value;                                                     \
+        }
 
-#define DEFINE_PTR(Type, ClassName, PropName) \
-inline Type *Get##PropName() { \
-static int PropOffset = -1; \
-if ( PropOffset == -1 ) {                                      \
-PropOffset = SDK::PropLibrary->GetPropertyByName(              \
-                    ( #ClassName + 1 ), #PropName).Offset; \
-return *reinterpret_cast<Type *>( uintptr_t(this) + PropOffset ); \
-}\
-inline void Set##PropName(Type Value) { \
-static int PropOffset = - 1; \
-if ( PropOffset == -1 ) {                              \
-PropOffset = SDK::PropLibrary->GetPropertyByName(      \
-                            ( #ClassName + 1 ), #PropName).Offset; \
-} \
-*reinterpret_cast<Type *>( uintptr_t(this) + PropOffset ) = Value; \
-}
+#define DEFINE_PTR( Type, ClassName, PropName )                                \
+        inline Type *Get##PropName() {                                         \
+                static int PropOffset = -1;                                    \
+                if ( PropOffset == -1 ) {                                      \
+                        PropOffset = SDK::PropLibrary                          \
+                                         ->GetPropertyByName(                  \
+                                             ( #ClassName + 1 ), #PropName )   \
+                                         .Offset;                              \
+                }                                                              \
+                return *reinterpret_cast<Type **>( uintptr_t( this ) +          \
+                                                  PropOffset );                \
+        }                                                                      \
+        inline void Set##PropName( Type* Value ) {                              \
+                static int PropOffset = -1;                                    \
+                if ( PropOffset == -1 ) {                                      \
+                        PropOffset = SDK::PropLibrary                          \
+                                         ->GetPropertyByName(                  \
+                                             ( #ClassName + 1 ), #PropName )   \
+                                         .Offset;                              \
+                }                                                              \
+                *reinterpret_cast<Type **>( uintptr_t( this ) + PropOffset ) =  \
+                    Value;                                                     \
+        }
 

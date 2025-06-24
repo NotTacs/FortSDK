@@ -31,7 +31,7 @@
 #include "UnrealContainers.h"
 #include "sdk/CoreObject_classes.h"
 #include "sdk/KismetPropertyLibrary.h"
-#include "sdk/Engine_classes.h"
+
 
 namespace SDK 
 {
@@ -44,6 +44,8 @@ extern FEngineVersion Engine_Version;
 extern FFortniteVersion Fortnite_Version;
 
 }
+
+#include "sdk/Engine_classes.h"
 
 template <class T>
 T& SDK::UObject::Get( const std::string &ClassName,
