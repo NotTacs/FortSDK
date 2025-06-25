@@ -332,15 +332,13 @@ template <typename InElementType> class TArray {
          * Constructor, initializes element number counters.
          */
         FORCEINLINE TArray() : Data( nullptr ), ArrayNum( 0 ), ArrayMax( 0 ) {}
+
       protected:
         ElementType *Data;
         int32 ArrayNum;
         int32 ArrayMax;
 
       public:
-        size_t ElementSize = sizeof( InElementType ); /* need to change this if you are using a different type of array*/
-
-
         FORCEINLINE ElementType *GetData() { return (ElementType *)Data; }
 
         FORCEINLINE const ElementType *GetData() const {
@@ -483,18 +481,85 @@ template <typename InElementType> class TArray {
                 return false;
         }
 
-        FORCEINLINE void ResizeGrow(){
-                Data = (ElementType *)FMemory::Realloc(
-                    Data, ( ArrayMax = 1 + ArrayNum ) * ElementSize,
-                    alignof( InElementType ) );
+        FORCEINLINE void ResizeGrow( int32 OldNum ) {
+                ArrayMax = DefaultCalculateSlackGrow(
+                    ArrayNum, ArrayMax, sizeof( ElementType ), false );
+                ElementType *OldData = Data;
+                if ( ArrayMax ) {
+                        Data = (ElementType *)FMemory::Realloc(
+                            Data,
+                            ( ArrayMax = ArrayNum + OldNum ) *
+                                sizeof( ElementType ),
+                            alignof( ElementType ) );
+
+                        if ( OldData && OldNum ) {
+                                const int32 NumCopiedElements =
+                                    FMath::Min( ArrayMax, OldNum );
+                                memcpy( Data, OldData,
+                                        NumCopiedElements *
+                                            sizeof( ElementType ) );
+                        }
+                }
         }
 
-        inline InElementType& Add(const InElementType& Element) {
-                ResizeGrow();
-                Data[ArrayNum] = Element;
-                ArrayNum++;
+        FORCEINLINE int32 AddUnitalized( int32 Count = 1 ) {
+                if ( Count >= 0 ) {
+                        const int32 OldNum = ArrayNum;
+                        if ( ( ArrayNum += Count ) > ArrayMax ) {
+                                ResizeGrow( OldNum );
+                        }
 
-                return Data[ArrayNum - 1];
+                        return OldNum;
+                }
+        }
+
+        FORCEINLINE int32 Emplace( InElementType &Item,
+                                   int32 ElementSize = sizeof( ElementType ) ) {
+                const int32 Index = AddUnitalized( 1 );
+                memcpy_s( (InElementType *)( __int64( Data ) +
+                                             ( ArrayNum * ElementSize ) ),
+                          ElementSize, (void *)&Item, ElementSize );
+
+                return Index;
+        }
+
+        FORCEINLINE int32 Emplace( const InElementType &Item,
+                                   int32 ElementSize = sizeof( ElementType ) ) {
+                const int32 Index = AddUnitalized( 1 );
+                memcpy_s( (InElementType *)( __int64( Data ) +
+                                             ( ArrayNum * ElementSize ) ),
+                          ElementSize, (void *)&Item, ElementSize );
+
+                return Index;
+        }
+
+        FORCEINLINE ElementType &
+        Emplace_GetRef( InElementType &Item,
+                        int32 ElementSize = sizeof( ElementType ) ) {
+                const int32 Index = AddUnitalized( 1 );
+                memcpy_s( (InElementType *)( __int64( Data ) +
+                                             ( ArrayNum * ElementSize ) ),
+                          ElementSize, (void *)&Item, ElementSize );
+                return Data[Index];
+        }
+
+        FORCEINLINE int32 Add( InElementType &Item,
+                               int32 ElementSize = sizeof( ElementType ) ) {
+                if ( &Item )
+                        return Emplace( Item, ElementSize );
+        }
+
+        FORCEINLINE int32 Add( const ElementType &Item, int32 ElementSize = sizeof(ElementType) ) {
+                if ( &Item )
+                        return Emplace( Item,ElementSize );
+        }
+
+        FORCEINLINE ElementType &
+        Add_GetRef( ElementType &Item,
+                    int32 ElementSize = sizeof( ElementType ) ) {
+                if ( &Item ) {
+                        return Emplace_GetRef( Item,ElementSize );
+                }
         }
 
         inline bool Remove( int32 Index ) {
@@ -531,7 +596,6 @@ template <typename InElementType> class TArray {
                 ArrayNum = 0;
                 Data = nullptr;
         }
-
 
         typedef TIndexedContainerIterator<TArray, ElementType, SizeType>
             TIterator;
@@ -570,7 +634,8 @@ template <typename InElementType> class TArray {
                 return RangedForIteratorType( ArrayNum, GetData() + Num() );
         }
         FORCEINLINE RangedForConstIteratorType end() const {
-                return RangedForConstIteratorType( ArrayNum, GetData() + Num() );
+                return RangedForConstIteratorType( ArrayNum,
+                                                   GetData() + Num() );
         }
 };
 
@@ -1022,30 +1087,24 @@ class FString {
                 return !result;
         }
 
-        friend std::ostream &operator<<( std::ostream &Stream,
-                                         FString &Str ) {
+        friend std::ostream &operator<<( std::ostream &Stream, FString &Str ) {
                 return Stream << Str.ToString();
         }
-        friend std::istream &operator>>( std::istream &Stream,
-                                         FString &Str ) {
+        friend std::istream &operator>>( std::istream &Stream, FString &Str ) {
                 std::string string = Str.ToString();
                 return Stream >> string;
         }
-        friend std::ostream &operator<<( std::ofstream &Stream,
-                                         FString &Str ) {
+        friend std::ostream &operator<<( std::ofstream &Stream, FString &Str ) {
                 return Stream << Str.ToString();
         }
-        friend std::ostream &operator<<( std::ostream &Stream,
-                                         FString Str ) {
+        friend std::ostream &operator<<( std::ostream &Stream, FString Str ) {
                 return Stream << Str.ToString();
         }
-        friend std::istream &operator>>( std::istream &Stream,
-                                         FString Str ) {
+        friend std::istream &operator>>( std::istream &Stream, FString Str ) {
                 std::string string = Str.ToString();
                 return Stream >> string;
         }
-        friend std::ostream &operator<<( std::ofstream &Stream,
-                                         FString Str ) {
+        friend std::ostream &operator<<( std::ofstream &Stream, FString Str ) {
                 return Stream << Str.ToString();
         }
 
@@ -1069,6 +1128,4 @@ class FString {
         }
 };
 
-        
-};
-
+}; // namespace SDK
