@@ -338,6 +338,9 @@ template <typename InElementType> class TArray {
         int32 ArrayMax;
 
       public:
+        size_t ElementSize = sizeof( InElementType ); /* need to change this if you are using a different type of array*/
+
+
         FORCEINLINE ElementType *GetData() { return (ElementType *)Data; }
 
         FORCEINLINE const ElementType *GetData() const {
@@ -480,72 +483,18 @@ template <typename InElementType> class TArray {
                 return false;
         }
 
-        FORCEINLINE void ResizeGrow( int32 OldNum ) {
-                ArrayMax = DefaultCalculateSlackGrow(
-                    ArrayNum, ArrayMax, sizeof( ElementType ), false );
-                ElementType *OldData = Data;
-                if ( ArrayMax ) {
-                        Data = (ElementType *)FMemory::Realloc(
-                            Data,
-                            ( ArrayMax = ArrayNum + OldNum ) *
-                                sizeof( ElementType ),
-                            alignof( ElementType ) );
-
-                        if ( OldData && OldNum ) {
-                                const int32 NumCopiedElements =
-                                    FMath::Min( ArrayMax, OldNum );
-                                memcpy( Data, OldData,
-                                        NumCopiedElements *
-                                            sizeof( ElementType ) );
-                        }
-                }
+        FORCEINLINE void ResizeGrow(){
+                Data = (ElementType *)FMemory::Realloc(
+                    Data, ( ArrayMax = 1 + ArrayNum ) * ElementSize,
+                    alignof( InElementType ) );
         }
 
-        FORCEINLINE int32 AddUnitalized( int32 Count = 1 ) {
-                if ( Count >= 0 ) {
-                        const int32 OldNum = ArrayNum;
-                        if ( ( ArrayNum += Count ) > ArrayMax ) {
-                                ResizeGrow( OldNum );
-                        }
+        inline InElementType& Add(const InElementType& Element) {
+                ResizeGrow();
+                Data[ArrayNum] = Element;
+                ArrayNum++;
 
-                        return OldNum;
-                }
-        }
-
-        FORCEINLINE int32 Emplace( InElementType &Item ) {
-                const int32 Index = AddUnitalized( 1 );
-                Data[Index] = Item;
-
-                return Index;
-        }
-
-        FORCEINLINE int32 Emplace( const InElementType &Item ) {
-                const int32 Index = AddUnitalized( 1 );
-                Data[Index] = Item;
-
-                return Index;
-        }
-
-        FORCEINLINE ElementType &Emplace_GetRef( InElementType &Item ) {
-                const int32 Index = AddUnitalized( 1 );
-                Data[Index] = Item;
-                return Data[Index];
-        }
-
-        FORCEINLINE int32 Add( InElementType &Item ) {
-                if ( &Item )
-                        return Emplace( Item );
-        }
-
-        FORCEINLINE int32 Add( const ElementType &Item ) {
-                if ( &Item )
-                        return Emplace( Item );
-        }
-
-        FORCEINLINE ElementType &Add_GetRef( ElementType &Item ) {
-                if ( &Item ) {
-                        return Emplace_GetRef( Item );
-                }
+                return Data[ArrayNum - 1];
         }
 
         inline bool Remove( int32 Index ) {
