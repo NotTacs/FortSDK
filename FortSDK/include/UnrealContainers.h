@@ -481,15 +481,15 @@ template <typename InElementType> class TArray {
                 return false;
         }
 
-        FORCEINLINE void ResizeGrow( int32 OldNum ) {
+        FORCEINLINE void ResizeGrow( int32 OldNum, int32 ElementSize = sizeof(ElementType) ) {
                 ArrayMax = DefaultCalculateSlackGrow(
-                    ArrayNum, ArrayMax, sizeof( ElementType ), false );
+                    ArrayNum, ArrayMax, ElementSize, false );
                 ElementType *OldData = Data;
                 if ( ArrayMax ) {
                         Data = (ElementType *)FMemory::Realloc(
                             Data,
                             ( ArrayMax = ArrayNum + OldNum ) *
-                                sizeof( ElementType ),
+                                ElementSize,
                             alignof( ElementType ) );
 
                         if ( OldData && OldNum ) {
@@ -497,16 +497,16 @@ template <typename InElementType> class TArray {
                                     FMath::Min( ArrayMax, OldNum );
                                 memcpy( Data, OldData,
                                         NumCopiedElements *
-                                            sizeof( ElementType ) );
+                                            ElementSize );
                         }
                 }
         }
 
-        FORCEINLINE int32 AddUnitalized( int32 Count = 1 ) {
+        FORCEINLINE int32 AddUnitalized( int32 Count = 1, int32 ElementSize = sizeof(ElementType) ) {
                 if ( Count >= 0 ) {
                         const int32 OldNum = ArrayNum;
                         if ( ( ArrayNum += Count ) > ArrayMax ) {
-                                ResizeGrow( OldNum );
+                                ResizeGrow( OldNum,ElementSize );
                         }
 
                         return OldNum;
@@ -515,7 +515,7 @@ template <typename InElementType> class TArray {
 
         FORCEINLINE int32 Emplace( InElementType &Item,
                                    int32 ElementSize = sizeof( ElementType ) ) {
-                const int32 Index = AddUnitalized( 1 );
+                const int32 Index = AddUnitalized( 1,ElementSize );
                 memcpy_s( (InElementType *)( __int64( Data ) +
                                              ( ArrayNum * ElementSize ) ),
                           ElementSize, (void *)&Item, ElementSize );
