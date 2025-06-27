@@ -357,10 +357,17 @@ template <typename InElementType> class TArray {
                 return (const ElementType &)Data[0];
         }
 
-        FORCEINLINE ElementType &GetData( int32 Index ) { return Data[Index]; }
+        FORCEINLINE ElementType &GetData( int32 Index,
+                                          int32 ElementSize = sizeof( ElementType) ) {
+                return Data[Index];
+        }
 
-        FORCEINLINE const ElementType &GetData( int32 Index ) const {
-                return (const ElementType &)Data[Index];
+        FORCEINLINE const ElementType &
+        GetData( int32 Index,
+                 int32 ElementSize = sizeof( ElementType ) ) const {
+                return *reinterpret_cast<const ElementType *>(
+                    reinterpret_cast<const uint8 *>( Data ) +
+                    Index * ElementSize );
         }
 
         /**
@@ -403,26 +410,6 @@ template <typename InElementType> class TArray {
          * @see GetSlack
          */
         FORCEINLINE int32 Max() const { return ArrayMax; }
-
-        /**
-         * Array bracket operator. Returns reference to element at give index.
-         *
-         * @returns Reference to indexed element.
-         */
-        FORCEINLINE ElementType &operator[]( int32 Index ) {
-                return GetData( Index );
-        }
-
-        /**
-         * Array bracket operator. Returns reference to element at give index.
-         *
-         * Const version of the above.
-         *
-         * @returns Reference to indexed element.
-         */
-        FORCEINLINE const ElementType &operator[]( int32 Index ) const {
-                return GetData( Index );
-        }
 
         /**
          * Finds element within the array.
