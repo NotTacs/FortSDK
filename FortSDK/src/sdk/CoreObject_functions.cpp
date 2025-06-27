@@ -146,3 +146,22 @@ void SDK::UObject::ProcessEvent(UFunction* Function, void* Parms) const {
         return ProcessEvent( this, Function, Parms );
 }
 
+
+SDK::UFunction* SDK::UObject::GetFunction(const std::string& FunctionName) {
+        UFunction *Found = nullptr;
+        for ( UStruct *Struct = this->GetClass(); Struct;
+              Struct = Struct->GetSuperStruct() ) {
+                SDK::FFunctionInfo FuncInfo =
+                    SDK::PropLibrary->GetFunctionByName(
+                        Struct->GetFName().ToString().ToString(),
+                        FunctionName );
+                if ( FuncInfo.Func ) {
+                        Found = FuncInfo.Func;
+                        break;
+                }
+
+
+        }
+        
+        return Found;
+}

@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\SDK.h" />
+    <ClInclude Include="include\sdk\Engine_classes.h" />
     <ClInclude Include="include\sdk\KismetPropertyLibrary.h" />
     <ClInclude Include="include\sdk\Offsets.h" />
     <ClInclude Include="include\sdk\CoreObject_classes.h" />
@@ -173,6 +174,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\sdk\CoreObject_functions.cpp" />
+    <ClCompile Include="src\sdk\Engine_functions.cpp" />
     <ClCompile Include="src\sdk\KismetLogLibrary.cpp" />
     <ClCompile Include="src\sdk\KismetMemoryLibrary.cpp" />
     <ClCompile Include="src\sdk\KismetPropertyLibrary.cpp" />

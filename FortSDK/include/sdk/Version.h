@@ -34,7 +34,7 @@ namespace SDK
                     Patch = parts[2];
             }
 
-            class FString ToString() const;
+            std::string ToString() const;
             
             bool operator==( const FEngineVersion &Other ) const {
                     return Major == Other.Major && Minor == Other.Minor &&
@@ -95,7 +95,7 @@ namespace SDK
                     Patch = parts.size() == 3 ? parts[2] : 0;
             }
 
-            class FString ToString() const;
+            std::string ToString() const;
 
             bool operator==( const FFortniteVersion &Other ) const {
                     return Major == Other.Major && Minor == Other.Minor &&

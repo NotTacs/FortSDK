@@ -20,6 +20,15 @@ namespace SDK
             std::string ClassName;
     };
 
+    class FKismetPropertyManager
+    {
+          public:
+            void *Prop;
+
+          public:
+            int GetOffset();
+    };
+
 	class FKismetPropertyLibrary
 	{
           public:

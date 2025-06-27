@@ -1,6 +1,6 @@
 #pragma once
-#include <cmath>
 #include <cassert>
+#include <cmath>
 
 template <typename A, typename B> struct TAreTypesEqual;
 
@@ -13,7 +13,6 @@ template <typename A> struct TAreTypesEqual<A, A> {
 };
 
 #define ARE_TYPES_EQUAL( A, B ) TAreTypesEqual<A, B>::Value
-
 
 inline void CheckHandler( const char *expr, const char *file, int line,
                           const std::string &msg = "" ) {
@@ -28,8 +27,8 @@ inline void CheckHandler( const char *expr, const char *file, int line,
 
 inline void CheckHandler( const char *expr, const char *file, int line,
                           const std::wstring &msg = L"" ) {
-        std::wcerr << L"CHECK FAILED: (" << expr << L")" << L" at " << file << L":"
-                  << line;
+        std::wcerr << L"CHECK FAILED: (" << expr << L")" << L" at " << file
+                   << L":" << line;
         if ( !msg.empty() )
                 std::wcerr << " - " << msg;
         std::cerr << std::endl;
@@ -37,7 +36,8 @@ inline void CheckHandler( const char *expr, const char *file, int line,
         std::abort();
 }
 
-inline void CheckHandlerWithNoStr( const char *expr, const char *file, int line ) {
+inline void CheckHandlerWithNoStr( const char *expr, const char *file,
+                                   int line ) {
         std::wcerr << L"CHECK FAILED: (" << expr << L")" << L" at " << file
                    << L":" << line;
         std::cerr << std::endl;
@@ -45,7 +45,7 @@ inline void CheckHandlerWithNoStr( const char *expr, const char *file, int line 
         std::abort();
 }
 
-inline void CheckSlowHandler( const char *expr, const char *file, int line) {
+inline void CheckSlowHandler( const char *expr, const char *file, int line ) {
         std::wcerr << L"CHECK FAILED: (" << expr << L")" << L" at " << file
                    << L":" << line;
         std::cerr << std::endl;
@@ -61,8 +61,8 @@ inline void CheckSlowHandler( const char *expr, const char *file, int line) {
 
 #define checkf( expr, message, ... )                                           \
         ( ( expr ) ? static_cast<void>( 0 )                                    \
-                   : CheckHandler( #expr, __FILE__, __LINE__,                   \
-                                  std::format( message, __VA_ARGS__ ) ) )
+                   : CheckHandler( #expr, __FILE__, __LINE__,                  \
+                                   std::format( message, __VA_ARGS__ ) ) )
 
 #if DO_CHECK_SLOW
 #define checkSlow( expr )                                                      \
@@ -93,7 +93,7 @@ inline bool EnsureFailed( const char *expr, const char *file, int line,
         } )()
 
 #define RESTRICT __restrict
-#define UE_ASSUME( x ) __assume(x)
+#define UE_ASSUME( x ) __assume( x )
 
 enum { INDEX_NONE = -1 };
 enum { UNICODE_BOM = 0xfeff };
@@ -139,8 +139,7 @@ FORCEINLINE auto Invoke( FuncType &&Func, ArgTypes &&...Args )
         return Forward<FuncType>( Func )( Forward<ArgTypes>( Args )... );
 }
 
-FORCEINLINE size_t DefaultQuantizeSize( size_t Count,
-                                              uint32_t Alignment ) {
+FORCEINLINE size_t DefaultQuantizeSize( size_t Count, uint32_t Alignment ) {
         return Count;
 }
 
@@ -175,8 +174,7 @@ FORCEINLINE int32_t DefaultCalculateSlackGrow( int32_t NumElements,
         return Retval;
 }
 
-namespace SDK 
-{
+namespace SDK {
 typedef uint32_t uint32;
 typedef int32_t int32;
 typedef uint64_t uint64;
@@ -323,20 +321,31 @@ struct TCheckedPointerIterator {
 };
 
 template <typename InElementType> class TArray {
-        template <typename OtherInElementType> friend class TArray;
-        friend class FString;
 
       public:
         typedef InElementType ElementType;
         typedef int32_t SizeType;
+        friend class FString;
 
+      public:
         /**
          * Constructor, initializes element number counters.
          */
-        FORCEINLINE TArray() : Data(nullptr), ArrayNum( 0 ), ArrayMax( 0 ) {}
+        FORCEINLINE TArray() : Data( nullptr ), ArrayNum( 0 ), ArrayMax( 0 ) {}
 
+      protected:
+        ElementType *Data;
+        int32 ArrayNum;
+        int32 ArrayMax;
 
       public:
+        FORCEINLINE ElementType *GetData() { return (ElementType *)Data; }
+
+        FORCEINLINE const ElementType *GetData() const {
+                return (const ElementType *)Data;
+        }
+
+        FORCEINLINE ElementType &GetFirstData() { return Data[0]; }
 
         /**
          * Helper function for returning a typed pointer to the first array
@@ -344,10 +353,21 @@ template <typename InElementType> class TArray {
          *
          * @returns Pointer to first array entry or nullptr if ArrayMax == 0.
          */
-        FORCEINLINE ElementType *GetData() { return (ElementType *)Data; }
+        FORCEINLINE const ElementType &GetFirstData() const {
+                return (const ElementType &)Data[0];
+        }
 
-        FORCEINLINE const ElementType *GetData() const {
-                return (const ElementType *)Data;
+        FORCEINLINE ElementType &GetData( int32 Index,
+                                          int32 ElementSize = sizeof( ElementType) ) {
+                return Data[Index];
+        }
+
+        FORCEINLINE const ElementType &
+        GetData( int32 Index,
+                 int32 ElementSize = sizeof( ElementType ) ) const {
+                return *reinterpret_cast<const ElementType *>(
+                    reinterpret_cast<const uint8 *>( Data ) +
+                    Index * ElementSize );
         }
 
         /**
@@ -365,24 +385,6 @@ template <typename InElementType> class TArray {
         FORCEINLINE int32 GetSlack() const { return ArrayMax - ArrayNum; }
 
         /**
-         * Checks array invariants: if array size is greater than zero and less
-         * than maximum.
-         */
-        FORCEINLINE void CheckInvariants() const {
-                checkSlow( ( ArrayNum >= 0 ) &
-                           ( ArrayMax >= ArrayNum ) ); // & for one branch
-        }
-
-        /**
-         * Checks if index is in array range.
-         *
-         * @param Index Index to check.
-         */
-        FORCEINLINE void RangeCheck( int32_t Index ) const {
-                CheckInvariants();
-        }
-
-        /**
          * Tests if index is valid, i.e. greater than or equal to zero, and less
          * than the number of elements in the array.
          *
@@ -392,14 +394,6 @@ template <typename InElementType> class TArray {
         FORCEINLINE bool IsValidIndex( int32 Index ) const {
                 return Index >= 0 && Index < ArrayNum;
         }
-
-        /**
-         * Returns true if the array is empty and contains no elements.
-         *
-         * @returns True if the array is empty.
-         * @see Num
-         */
-        bool IsEmpty() const { return ArrayNum == 0; }
 
         /**
          * Returns number of elements in array.
@@ -418,28 +412,6 @@ template <typename InElementType> class TArray {
         FORCEINLINE int32 Max() const { return ArrayMax; }
 
         /**
-         * Array bracket operator. Returns reference to element at give index.
-         *
-         * @returns Reference to indexed element.
-         */
-        FORCEINLINE ElementType &operator[]( int32 Index ) {
-                RangeCheck( Index );
-                return GetData()[Index];
-        }
-
-        /**
-         * Array bracket operator. Returns reference to element at give index.
-         *
-         * Const version of the above.
-         *
-         * @returns Reference to indexed element.
-         */
-        FORCEINLINE const ElementType &operator[]( int32 Index ) const {
-                RangeCheck( Index );
-                return GetData()[Index];
-        }
-
-        /**
          * Finds element within the array.
          *
          * @param Item Item to look for.
@@ -447,10 +419,10 @@ template <typename InElementType> class TArray {
          * @returns True if found. False otherwise.
          * @see FindLast, FindLastByPredicate
          */
-        FORCEINLINE bool Find( const ElementType &Item,
-                               SizeType &Index ) const {
+
+        FORCEINLINE bool Find( const ElementType &Item, int32 Index ) const {
                 Index = this->Find( Item );
-                return Index != INDEX_NONE;
+                return Index != -1;
         }
 
         /**
@@ -461,547 +433,200 @@ template <typename InElementType> class TArray {
          * @see FindLast, FindLastByPredicate
          */
         int32 Find( const ElementType &Item ) const {
-                const ElementType *__restrict Start = GetData();
-                for ( const ElementType *__restrict
-                          Data = Start,
-                          *__restrict DataEnd = Data + ArrayNum;
-                      Data != DataEnd; ++Data ) {
-                        if ( *Data == Item ) {
-                                return static_cast<int32>( Data - Start );
+                for ( int i = 0; i < ArrayNum; i++ ) {
+                        if ( Data[i] == Item ) {
+                                return static_cast<int32>( i );
                         }
                 }
-                return INDEX_NONE;
+
+                return -1;
         }
 
-        /**
-         * Finds element within the array starting from the end.
-         *
-         * @param Item Item to look for.
-         * @param Index Output parameter. Found index.
-         * @returns True if found. False otherwise.
-         * @see Find, FindLastByPredicate
-         */
         FORCEINLINE bool FindLast( const ElementType &Item,
-                                   SizeType &Index ) const {
+                                   int32 Index ) const {
                 Index = this->FindLast( Item );
-                return Index != INDEX_NONE;
+                return Index != -1;
         }
 
-        /**
-         * Finds element within the array starting from the end.
-         *
-         * @param Item Item to look for.
-         * @returns Index of the found element. INDEX_NONE otherwise.
-         */
-        SizeType FindLast( const ElementType &Item ) const {
-                for ( const ElementType *RESTRICT
-                          Start = GetData(),
-                          *RESTRICT Data = Start + ArrayNum;
-                      Data != Start; ) {
-                        --Data;
-                        if ( *Data == Item ) {
-                                return static_cast<SizeType>( Data - Start );
-                        }
-                }
-                return INDEX_NONE;
-        }
-
-        /**
-         * Searches an initial subrange of the array for the last occurrence of
-         * an element which matches the specified predicate.
-         *
-         * @param Pred Predicate taking array element and returns true if
-         * element matches search criteria, false otherwise.
-         * @param Count The number of elements from the front of the array
-         * through which to search.
-         * @returns Index of the found element. INDEX_NONE otherwise.
-         */
-        template <typename Predicate>
-        SizeType FindLastByPredicate( Predicate Pred, SizeType Count ) const {
-                check( Count >= 0 && Count <= this->Num() );
-                for ( const ElementType *RESTRICT
-                          Start = GetData(),
-                          *RESTRICT Data = Start + Count;
-                      Data != Start; ) {
-                        --Data;
-                        if ( ::Invoke( Pred, *Data ) ) {
-                                return static_cast<SizeType>( Data - Start );
-                        }
-                }
-                return INDEX_NONE;
-        }
-
-        /**
-         * Searches the array for the last occurrence of an element which
-         * matches the specified predicate.
-         *
-         * @param Pred Predicate taking array element and returns true if
-         * element matches search criteria, false otherwise.
-         * @returns Index of the found element. INDEX_NONE otherwise.
-         */
-        template <typename Predicate>
-        FORCEINLINE SizeType FindLastByPredicate( Predicate Pred ) const {
-                return FindLastByPredicate( Pred, ArrayNum );
-        }
-
-        /**
-         * Finds an item by key (assuming the ElementType overloads operator==
-         * for the comparison).
-         *
-         * @param Key The key to search by.
-         * @returns Index to the first matching element, or INDEX_NONE if none
-         * is found.
-         */
-        template <typename KeyType>
-        SizeType IndexOfByKey( const KeyType &Key ) const {
-                const ElementType *RESTRICT Start = GetData();
-                for ( const ElementType *RESTRICT
-                          Data = Start,
-                          *RESTRICT DataEnd = Start + ArrayNum;
-                      Data != DataEnd; ++Data ) {
-                        if ( *Data == Key ) {
-                                return static_cast<SizeType>( Data - Start );
-                        }
-                }
-                return INDEX_NONE;
-        }
-
-        /**
-         * Finds an item by predicate.
-         *
-         * @param Pred The predicate to match.
-         * @returns Index to the first matching element, or INDEX_NONE if none
-         * is found.
-         */
-        template <typename Predicate>
-        SizeType IndexOfByPredicate( Predicate Pred ) const {
-                const ElementType *RESTRICT Start = GetData();
-                for ( const ElementType *RESTRICT
-                          Data = Start,
-                          *RESTRICT DataEnd = Start + ArrayNum;
-                      Data != DataEnd; ++Data ) {
-                        if ( ::Invoke( Pred, *Data ) ) {
-                                return static_cast<SizeType>( Data - Start );
-                        }
-                }
-                return INDEX_NONE;
-        }
-
-        /**
-         * Finds an item by key (assuming the ElementType overloads operator==
-         * for the comparison).
-         *
-         * @param Key The key to search by.
-         * @returns Pointer to the first matching element, or nullptr if none is
-         * found.
-         * @see Find
-         */
-        template <typename KeyType>
-        FORCEINLINE const ElementType *FindByKey( const KeyType &Key ) const {
-                return const_cast<TArray *>( this )->FindByKey( Key );
-        }
-
-        /**
-         * Finds an item by key (assuming the ElementType overloads operator==
-         * for the comparison). Time Complexity: O(n), starts iteration from the
-         * beginning so better performance if Key is in the front
-         *
-         * @param Key The key to search by.
-         * @returns Pointer to the first matching element, or nullptr if none is
-         * found.
-         * @see Find
-         */
-        template <typename KeyType>
-        ElementType *FindByKey( const KeyType &Key ) {
-                for ( ElementType *RESTRICT Data = GetData(),
-                                            *RESTRICT DataEnd = Data + ArrayNum;
-                      Data != DataEnd; ++Data ) {
-                        if ( *Data == Key ) {
-                                return Data;
+        int32 FindLast( const ElementType &Item ) const {
+                for ( int i = ArrayNum; i > 0; i-- ) {
+                        if ( Data[i] == Item ) {
+                                return static_cast<int32>( i );
                         }
                 }
 
-                return nullptr;
+                return -1;
         }
 
-        /**
-         * Finds an element which matches a predicate functor.
-         *
-         * @param Pred The functor to apply to each element.
-         * @returns Pointer to the first element for which the predicate returns
-         * true, or nullptr if none is found.
-         * @see FilterByPredicate, ContainsByPredicate
-         */
-        template <typename Predicate>
-        FORCEINLINE const ElementType *FindByPredicate( Predicate Pred ) const {
-                return const_cast<TArray *>( this )->FindByPredicate( Pred );
-        }
-
-        /**
-         * Finds an element which matches a predicate functor.
-         *
-         * @param Pred The functor to apply to each element. true, or nullptr if
-         * none is found.
-         * @see FilterByPredicate, ContainsByPredicate
-         */
-        template <typename Predicate>
-        ElementType *FindByPredicate( Predicate Pred ) {
-                for ( int32_t i = 0; i < ArrayNum; ++i ) {
-                        if ( Pred( Data[i] ) ) {
-                                return &Data[i];
-                        }
-                }
-                return nullptr;
-        }
-
-        /**
-         * Filters the elements in the array based on a predicate functor.
-         *
-         * @param Pred The functor to apply to each element.
-         * @returns TArray with the same type as this object which contains
-         *          the subset of elements for which the functor returns true.
-         * @see FindByPredicate, ContainsByPredicate
-         */
-        template <typename Predicate>
-        TArray<ElementType> FilterByPredicate( Predicate Pred ) const {
-                TArray<ElementType> FilterResults;
-                for ( const ElementType *RESTRICT
-                          Data = GetData(),
-                          *RESTRICT DataEnd = Data + ArrayNum;
-                      Data != DataEnd; ++Data ) {
-                        if ( ::Invoke( Pred, *Data ) ) {
-                                FilterResults.Add( *Data );
-                        }
-                }
-                return FilterResults;
-        }
-
-        /**
-         * Checks if this array contains the element.
-         *
-         * @returns	True if found. False otherwise.
-         * @see ContainsByPredicate, FilterByPredicate, FindByPredicate
-         */
-        template <typename ComparisonType>
-        bool Contains( const ComparisonType &Item ) const {
-                for ( const ElementType *RESTRICT
-                          Data = GetData(),
-                          *RESTRICT DataEnd = Data + ArrayNum;
-                      Data != DataEnd; ++Data ) {
-                        if ( *Data == Item ) {
+        bool Contains( const InElementType &Item ) const {
+                for ( int i = 0; i < ArrayNum; i++ ) {
+                        if ( Data[i] == Item ) {
                                 return true;
                         }
                 }
+
                 return false;
         }
 
-        /**
-         * Checks if this array contains element for which the predicate is
-         * true.
-         *
-         * @param Predicate to use
-         * @returns	True if found. False otherwise.
-         * @see Contains, Find
-         */
-        template <typename Predicate>
-        FORCEINLINE bool ContainsByPredicate( Predicate Pred ) const {
-                return FindByPredicate( Pred ) != nullptr;
-        }
+        FORCEINLINE void ResizeGrow( int32 OldNum, int32 ElementSize = sizeof(ElementType) ) {
+                ArrayMax = DefaultCalculateSlackGrow(
+                    ArrayNum, ArrayMax, ElementSize, false );
+                ElementType *OldData = Data;
+                if ( ArrayMax ) {
+                        Data = (ElementType *)FMemory::Realloc(
+                            Data,
+                            ( ArrayMax = ArrayNum + OldNum ) *
+                                ElementSize,
+                            alignof( ElementType ) );
 
-        /**
-         * Equality operator.
-         *
-         * @param OtherArray Array to compare.
-         * @returns True if this array is the same as OtherArray. False
-         * otherwise.
-         */
-        bool operator==( const TArray &OtherArray ) const {
-                SizeType Count = Num();
-
-                return Count == OtherArray.Num(); /*&&
-                       CompareItems( GetData(), OtherArray.GetData(), Count );*/
-        }
-
-        /**
-         * Inequality operator.
-         *
-         * @param OtherArray Array to compare.
-         * @returns True if this array is NOT the same as OtherArray. False
-         * otherwise.
-         */
-        FORCEINLINE bool operator!=( const TArray &OtherArray ) const {
-                return !( *this == OtherArray );
-        }
-
-        	/**
-         * Adds a given number of uninitialized elements into the array.
-         *
-         * Caution, AddUninitialized() will create elements without calling
-         * the constructor and this is not appropriate for element types that
-         * require a constructor to function properly.
-         *
-         * @param Count Number of elements to add.
-         * @returns Number of elements in array before addition.
-         */
-        FORCEINLINE SizeType AddUninitialized( SizeType Count = 1 ) {
-                CheckInvariants();
-                checkSlow( Count >= 0 );
-
-                if ( ArrayMax < ArrayNum + Count ) {
-                        ResizeGrow( Count );
-                }
-                return ArrayNum;
-        }
-
-        /**
-         * Checks that the specified address is not part of an element within
-         * the container. Used for implementations to check that reference
-         * arguments aren't going to be invalidated by possible reallocation.
-         *
-         * @param Addr The address to check.
-         * @see Add, Remove
-         */
-        FORCEINLINE void CheckAddress( const ElementType *Addr ) const {
-                check( Addr );
-        }
-
-        FORCEINLINE void ResizeGrow(int32 OldNum)
-        {
-                Data = (ElementType *)FMemory::Realloc(
-                    Data,
-                    ( ArrayMax = OldNum + ArrayNum ) * sizeof( ElementType ),
-                    alignof( ElementType ) );
-
-        }
-
-        void RemoveAtImpl( SizeType Index, SizeType Count,
-                           bool bAllowShrinking ) {
-                if ( Count ) {
-                        CheckInvariants();
-                        checkSlow( ( Count >= 0 ) & ( Index >= 0 ) &
-                                   ( Index + Count <= ArrayNum ) );
-
-                        // DestructItems( GetData() + Index, Count );
-
-                        // Skip memmove in the common case that there is nothing
-                        // to move.
-                        SizeType NumToMove = ArrayNum - Index - Count;
-                        if ( NumToMove ) {
-                                memmove( (uint8 *)Data +
-                                             ( Index ) * sizeof( ElementType ),
-                                         (uint8 *)Data +
-                                             ( Index + Count ) *
-                                                 sizeof( ElementType ),
-                                         NumToMove * sizeof( ElementType ) );
-                        }
-                        ArrayNum -= Count;
-
-                        if ( bAllowShrinking ) {
-                                // ResizeShrink();
+                        if ( OldData && OldNum ) {
+                                const int32 NumCopiedElements =
+                                    FMath::Min( ArrayMax, OldNum );
+                                memcpy( Data, OldData,
+                                        NumCopiedElements *
+                                            ElementSize );
                         }
                 }
         }
 
-        /**
-         * Removes an element (or elements) at given location optionally
-         * shrinking the array.
-         *
-         * @param Index Location in array of the element to remove.
-         * @param Count (Optional) Number of elements to remove. Default is 1.
-         * @param bAllowShrinking (Optional) Tells if this call can shrink array
-         * if suitable after remove. Default is true.
-         */
-        FORCEINLINE void RemoveAt( SizeType Index ) {
-                RemoveAtImpl( Index, 1, true );
+        FORCEINLINE int32 AddUnitalized( int32 Count = 1, int32 ElementSize = sizeof(ElementType) ) {
+                if ( Count >= 0 ) {
+                        const int32 OldNum = ArrayNum;
+                        if ( ( ArrayNum += Count ) > ArrayMax ) {
+                                ResizeGrow( OldNum,ElementSize );
+                        }
+
+                        return OldNum;
+                }
         }
 
-        /**
-         * Removes an element (or elements) at given location optionally
-         * shrinking the array.
-         *
-         * @param Index Location in array of the element to remove.
-         * @param Count (Optional) Number of elements to remove. Default is 1.
-         * @param bAllowShrinking (Optional) Tells if this call can shrink array
-         * if suitable after remove. Default is true.
-         */
-        template <typename CountType>
-        FORCEINLINE void RemoveAt( SizeType Index, CountType Count,
-                                   bool bAllowShrinking = true ) {
-                static_assert( !TAreTypesEqual<CountType, bool>::Value,
-                               "TArray::RemoveAt: unexpected bool passed as "
-                               "the Count argument" );
-                RemoveAtImpl( Index, (SizeType)Count, bAllowShrinking );
-        }
+        FORCEINLINE int32 Emplace( InElementType &Item,
+                                   int32 ElementSize = sizeof( ElementType ) ) {
+                const int32 Index = AddUnitalized( 1,ElementSize );
+                memcpy_s( (InElementType *)( __int64( Data ) +
+                                             ( ArrayNum * ElementSize ) ),
+                          ElementSize, (void *)&Item, ElementSize );
 
-        FORCEINLINE SizeType Emplace(ElementType& Item) {
-                const SizeType Index = AddUninitialized( 1 );
-                GetData()[Index] = Item;
-                ArrayNum++;
                 return Index;
         }
 
-        FORCEINLINE SizeType Emplace(const ElementType& Item) {
-                const SizeType Index = AddUninitialized( 1 );
-                GetData()[Index] = Item;
-                ArrayNum++;
+        FORCEINLINE int32 Emplace( const InElementType &Item,
+                                   int32 ElementSize = sizeof( ElementType ) ) {
+                const int32 Index = AddUnitalized( 1 );
+                memcpy_s( (InElementType *)( __int64( Data ) +
+                                             ( ArrayNum * ElementSize ) ),
+                          ElementSize, (void *)&Item, ElementSize );
+
                 return Index;
         }
 
-        /**
-         * Constructs a new item at the end of the array, possibly reallocating
-         * the whole array to fit.
-         *
-         * @param Args	The arguments to forward to the constructor of the new
-         * item.
-         * @return A reference to the newly-inserted element.
-         */
-        template <typename... ArgsType>
-        FORCEINLINE ElementType &Emplace_GetRef( ArgsType &&...Args ) {
-                const SizeType Index = AddUninitialized( 1 );
-                ElementType *Ptr = GetData() + Index;
-                new ( Ptr ) ElementType( Forward<ArgsType>( Args )... );
-                return *Ptr;
+        FORCEINLINE ElementType &
+        Emplace_GetRef( InElementType &Item,
+                        int32 ElementSize = sizeof( ElementType ) ) {
+                const int32 Index = AddUnitalized( 1 );
+                memcpy_s( (InElementType *)( __int64( Data ) +
+                                             ( ArrayNum * ElementSize ) ),
+                          ElementSize, (void *)&Item, ElementSize );
+                return Data[Index];
         }
 
-        FORCEINLINE SizeType Add( ElementType &Item ) { 
-                CheckAddress( &Item );
-                return Emplace( Item );
+        FORCEINLINE int32 Add( InElementType &Item,
+                               int32 ElementSize = sizeof( ElementType ) ) {
+                if ( &Item )
+                        return Emplace( Item, ElementSize );
         }
 
-        /**
-         * Adds a new item to the end of the array, possibly reallocating the
-         * whole array to fit.
-         *
-         * @param Item The item to add
-         * @return Index to the new item
-         * @see AddDefaulted, AddUnique, AddZeroed, Append, Insert
-         */
-        FORCEINLINE SizeType Add( const ElementType &Item ) {
-                CheckAddress( &Item );
-                return Emplace( Item );
+        FORCEINLINE int32 Add( const ElementType &Item, int32 ElementSize = sizeof(ElementType) ) {
+                if ( &Item )
+                        return Emplace( Item,ElementSize );
         }
 
-        /**
-         * Adds a new item to the end of the array, possibly reallocating the
-         * whole array to fit.
-         *
-         * Move semantics version.
-         *
-         * @param Item The item to add
-         * @return A reference to the newly-inserted element.
-         * @see AddDefaulted_GetRef, AddUnique_GetRef, AddZeroed_GetRef,
-         * Insert_GetRef
-         */
-        FORCEINLINE ElementType &Add_GetRef( ElementType &&Item ) {
-                CheckAddress( &Item );
-                return Emplace_GetRef( MoveTempIfPossible( Item ) );
+        FORCEINLINE ElementType &
+        Add_GetRef( ElementType &Item,
+                    int32 ElementSize = sizeof( ElementType ) ) {
+                if ( &Item ) {
+                        return Emplace_GetRef( Item,ElementSize );
+                }
         }
 
-        /**
-         * Adds a new item to the end of the array, possibly reallocating the
-         * whole array to fit.
-         *
-         * @param Item The item to add
-         * @return A reference to the newly-inserted element.
-         * @see AddDefaulted_GetRef, AddUnique_GetRef, AddZeroed_GetRef,
-         * Insert_GetRef
-         */
-        FORCEINLINE ElementType &Add_GetRef( const ElementType &Item ) {
-                CheckAddress( &Item );
-                return Emplace_GetRef( Item );
+        inline bool Remove( int32 Index ) {
+                if ( !IsValidIndex( Index ) )
+                        return false;
+
+                ArrayNum--;
+
+                for ( int i = Index; i < ArrayNum; i++ ) {
+                        int32 NextIndex = i + 1;
+                        Data[i] = Data[NextIndex];
+                }
         }
 
-        /**
-         * Adds new items to the end of the array, possibly reallocating the
-         * whole array to fit. The new items will be zeroed.
-         *
-         * Caution, AddZeroed() will create elements without calling the
-         * constructor and this is not appropriate for element types that
-         * require a constructor to function properly.
-         *
-         * @param  Count  The number of new items to add.
-         * @return Index to the first of the new items.
-         * @see Add, AddDefaulted, AddUnique, Append, Insert
-         */
-        SizeType AddZeroed( SizeType Count = 1 ) {
-                const SizeType Index = AddUninitialized( Count );
-                ZeroMemory( (uint8 *)Data +
-                                      Index * sizeof( ElementType ),
-                                  Count * sizeof( ElementType ) );
-                return Index;
+        int32 RemoveSingle( const ElementType &Item ) {
+                int32 Index = Find( Item );
+
+                if ( Index == -1 ) {
+                        return 0;
+                }
+
+                --ArrayNum;
+
+                for ( int i = Index; i < ArrayNum; i++ ) {
+                        int32 NextIndex = i + 1;
+                        Data[i] = Data[NextIndex];
+                }
+
+                return 1;
         }
+
+        inline void Free() {
+                ArrayMax = 0;
+                ArrayNum = 0;
+                Data = nullptr;
+        }
+
+        typedef TIndexedContainerIterator<TArray, ElementType, SizeType>
+            TIterator;
+        typedef TIndexedContainerIterator<const TArray, const ElementType,
+                                          SizeType>
+            TConstIterator;
 
         /**
-         * Adds a new item to the end of the array, possibly reallocating the
-         * whole array to fit. The new item will be zeroed.
+         * Creates an iterator for the contents of this array
          *
-         * Caution, AddZeroed_GetRef() will create elements without calling the
-         * constructor and this is not appropriate for element types that
-         * require a constructor to function properly.
-         *
-         * @return A reference to the newly-inserted element.
-         * @see Add_GetRef, AddDefaulted_GetRef, AddUnique_GetRef, Insert_GetRef
+         * @returns The iterator.
          */
-        ElementType &AddZeroed_GetRef() {
-                const SizeType Index = AddUninitialized( 1 );
-                ElementType *Ptr = GetData() + Index;
-                ZeroMemory( Ptr, sizeof( ElementType ) );
-                return *Ptr;
+        TIterator CreateIterator() { return TIterator( *this ); }
+
+        /**
+         * Creates a const iterator for the contents of this array
+         *
+         * @returns The const iterator.
+         */
+        TConstIterator CreateConstIterator() const {
+                return TConstIterator( *this );
         }
 
-     protected:
-       InElementType *Data;
-       int32 ArrayNum;
-       int32 ArrayMax;
+        typedef TCheckedPointerIterator<ElementType, SizeType>
+            RangedForIteratorType;
+        typedef TCheckedPointerIterator<const ElementType, SizeType>
+            RangedForConstIteratorType;
 
-     public:
-
-
-
-       	typedef TIndexedContainerIterator<TArray, ElementType, SizeType>
-           TIterator;
-       typedef TIndexedContainerIterator<const TArray, const ElementType,
-                                         SizeType>
-           TConstIterator;
-
-       /**
-        * Creates an iterator for the contents of this array
-        *
-        * @returns The iterator.
-        */
-       TIterator CreateIterator() { return TIterator( *this ); }
-
-       /**
-        * Creates a const iterator for the contents of this array
-        *
-        * @returns The const iterator.
-        */
-       TConstIterator CreateConstIterator() const {
-               return TConstIterator( *this );
-       }
-
-       	typedef TCheckedPointerIterator<ElementType, SizeType>
-           RangedForIteratorType;
-       typedef TCheckedPointerIterator<const ElementType, SizeType>
-           RangedForConstIteratorType;
-
-       FORCEINLINE RangedForIteratorType begin() {
-               return RangedForIteratorType( ArrayNum, GetData() );
-       }
-       FORCEINLINE RangedForConstIteratorType begin() const {
-               return RangedForConstIteratorType( ArrayNum, GetData() );
-       }
-       FORCEINLINE RangedForIteratorType end() {
-               return RangedForIteratorType( ArrayNum, GetData() + Num() );
-       }
-       FORCEINLINE RangedForConstIteratorType end() const {
-               return RangedForConstIteratorType( ArrayNum, GetData() + Num() );
-       }
+        FORCEINLINE RangedForIteratorType begin() {
+                return RangedForIteratorType( ArrayNum, GetData() );
+        }
+        FORCEINLINE RangedForConstIteratorType begin() const {
+                return RangedForConstIteratorType( ArrayNum, GetData() );
+        }
+        FORCEINLINE RangedForIteratorType end() {
+                return RangedForIteratorType( ArrayNum, GetData() + Num() );
+        }
+        FORCEINLINE RangedForConstIteratorType end() const {
+                return RangedForConstIteratorType( ArrayNum,
+                                                   GetData() + Num() );
+        }
 };
 
-template<typename T>
-struct TTupleBaseElement
-{
+template <typename T> struct TTupleBaseElement {
         TTupleBaseElement( TTupleBaseElement && ) = default;
         TTupleBaseElement( const TTupleBaseElement & ) = default;
         TTupleBaseElement &operator=( TTupleBaseElement && ) = default;
@@ -1012,9 +637,7 @@ struct TTupleBaseElement
         T Value;
 };
 
-template<typename ...Types>
-struct TTupleBase : TTupleBaseElement<Types>
-{
+template <typename... Types> struct TTupleBase : TTupleBaseElement<Types> {
         TTupleBase() = default;
         TTupleBase( TTupleBase &&Other ) = default;
         TTupleBase( const TTupleBase &Other ) = default;
@@ -1022,7 +645,7 @@ struct TTupleBase : TTupleBaseElement<Types>
         TTupleBase &operator=( const TTupleBase &Other ) = default;
 };
 
-template<typename... Types> struct TTuple : TTupleBase < Types> {
+template <typename... Types> struct TTuple : TTupleBase<Types> {
       public:
         TTuple() = default;
         TTuple( TTuple && ) = default;
@@ -1031,7 +654,7 @@ template<typename... Types> struct TTuple : TTupleBase < Types> {
         TTuple &operator=( const TTuple & ) = default;
 };
 
-template<typename KeyType, typename ValueType>
+template <typename KeyType, typename ValueType>
 using TPair = TTuple<KeyType, ValueType>;
 
 /** Allocated elements are overlapped with free element info in the element
@@ -1118,10 +741,10 @@ struct FBitSet {
         }
 };
 
-class TBitArray
-{
+class TBitArray {
         typedef uint32 WordType;
         static constexpr WordType FullWordMask = (WordType)-1;
+
       public:
         TBitArray()
             : NumBits( 0 ), MaxBits( AllocatorInstance.GetInitialCapacity() *
@@ -1137,10 +760,9 @@ class TBitArray
          */
         FORCEINLINE explicit TBitArray( bool bValue, int32 InNumBits )
             : MaxBits( AllocatorInstance.GetInitialCapacity() *
-                       NumBitsPerDWORD ) {
-        }
+                       NumBitsPerDWORD ) {}
 
-     public:
+      public:
         void CheckInvariants() const {
 
                 checkf( NumBits <= MaxBits,
@@ -1174,65 +796,61 @@ class TBitArray
                 return (uint32 *)AllocatorInstance.GetAllocation();
         }
 
+      private:
+        TInlineAllocator<4>::ForElementType<int32> AllocatorInstance;
+        int32 NumBits;
+        int32 MaxBits;
 
+        /**
+         * Clears the slack bits within the final partially relevant Word
+         */
+        void ClearPartialSlackBits() {
+                // TBitArray has a contract about bits outside of the active
+                // range - the bits in the final word past NumBits are
+                // guaranteed to be 0 This prevents easy-to-make determinism
+                // errors from users of TBitArray that do not carefully mask the
+                // final word. It also allows us optimize some operations which
+                // would otherwise require us to mask the last word.
+                const int32 UsedBits = NumBits % NumBitsPerDWORD;
+                if ( UsedBits != 0 ) {
+                        const int32 LastWordIndex = NumBits / NumBitsPerDWORD;
+                        const uint32 SlackMask =
+                            FullWordMask >> ( NumBitsPerDWORD - UsedBits );
 
-     private:
-       TInlineAllocator<4>::ForElementType<int32> AllocatorInstance;
-       int32 NumBits;
-       int32 MaxBits;
+                        uint32 *LastWord = ( GetData() + LastWordIndex );
+                        *LastWord = *LastWord & SlackMask;
+                }
+        }
 
-       	/**
-        * Clears the slack bits within the final partially relevant Word
-        */
-       void ClearPartialSlackBits() {
-               // TBitArray has a contract about bits outside of the active
-               // range - the bits in the final word past NumBits are guaranteed
-               // to be 0 This prevents easy-to-make determinism errors from
-               // users of TBitArray that do not carefully mask the final word.
-               // It also allows us optimize some operations which would
-               // otherwise require us to mask the last word.
-               const int32 UsedBits = NumBits % NumBitsPerDWORD;
-               if ( UsedBits != 0 ) {
-                       const int32 LastWordIndex = NumBits / NumBitsPerDWORD;
-                       const uint32 SlackMask =
-                           FullWordMask >> ( NumBitsPerDWORD - UsedBits );
+        FORCEINLINE uint32 GetNumWords() const {
+                return FBitSet::CalculateNumWords( NumBits );
+        }
 
-                       uint32 *LastWord = ( GetData() + LastWordIndex );
-                       *LastWord = *LastWord & SlackMask;
-               }
-       }
+        FORCEINLINE uint32 GetMaxWords() const {
+                return FBitSet::CalculateNumWords( MaxBits );
+        }
 
-       	FORCEINLINE uint32 GetNumWords() const {
-               return FBitSet::CalculateNumWords( NumBits );
-       }
+        FORCEINLINE static void SetWords( uint32 *Words, int32 NumWords,
+                                          bool bValue ) {
+                if ( NumWords > 8 ) {
+                        memset( Words, bValue ? 0xff : 0,
+                                NumWords * sizeof( uint32 ) );
+                } else {
+                        uint32 Word = bValue ? ~0u : 0u;
+                        for ( int32 Idx = 0; Idx < NumWords; ++Idx ) {
+                                Words[Idx] = Word;
+                        }
+                }
+        }
 
-       FORCEINLINE uint32 GetMaxWords() const {
-               return FBitSet::CalculateNumWords( MaxBits );
-       }
-
-       FORCEINLINE static void SetWords( uint32 *Words, int32 NumWords,
-                                         bool bValue ) {
-               if ( NumWords > 8 ) {
-                       memset( Words, bValue ? 0xff : 0,
-                                        NumWords * sizeof( uint32 ) );
-               } else {
-                       uint32 Word = bValue ? ~0u : 0u;
-                       for ( int32 Idx = 0; Idx < NumWords; ++Idx ) {
-                               Words[Idx] = Word;
-                       }
-               }
-       }
-
-       /**
-        * Removes all bits from the array retaining any space already allocated.
-        */
-       void Reset() { NumBits = 0; }
-
+        /**
+         * Removes all bits from the array retaining any space already
+         * allocated.
+         */
+        void Reset() { NumBits = 0; }
 };
 
-template<typename InElementType>
-class TSparseArray
-{
+template <typename InElementType> class TSparseArray {
       private:
         typedef TSparseArrayElementOrFreeListLink<
             TAlignedBytes<sizeof( InElementType ), alignof( InElementType )>>
@@ -1250,35 +868,25 @@ class TSparseArray
         }
 
       private:
-
-        typedef TArray<FElementOrFreeListLink>
-            DataType;
+        typedef TArray<FElementOrFreeListLink> DataType;
         DataType Data;
-        typedef TBitArray
-            AllocationBitArrayType;
+        typedef TBitArray AllocationBitArrayType;
         TBitArray AllocationFlags;
         int32 FirstFreeIndex;
         int32 NumFreeIndices;
-
-
 };
 
-template<typename InElementType>
-class TSetElement
-{
+template <typename InElementType> class TSetElement {
       private:
         template <typename SetDataType> friend class TSet;
+
       private:
         InElementType Value;
         int32 HashNextId;
         int32 HashIndex;
 };
 
-
-
-template<typename InElementType>
-class TSet
-{
+template <typename InElementType> class TSet {
       public:
         typedef InElementType ElementType;
 
@@ -1290,9 +898,7 @@ class TSet
         FORCEINLINE TSet() : HashSize( 0 ) {}
 
       private:
-
-        typedef TSparseArray<SetElementType>
-              ElementArrayType;
+        typedef TSparseArray<SetElementType> ElementArrayType;
         using HashType = TInlineAllocator<1>::ForElementType<int32>;
 
         ElementArrayType Elements;
@@ -1300,36 +906,32 @@ class TSet
         mutable HashType Hash;
         mutable int32 HashSize;
 
-        public:
+      public:
 };
 
-template<typename KeyType, typename ValueType>
-class TMapBase
-{
-       template <typename OtherKeyType, typename OtherValueType>
-       friend class TMapBase;
+template <typename KeyType, typename ValueType> class TMapBase {
+        template <typename OtherKeyType, typename OtherValueType>
+        friend class TMapBase;
 
-       public:
-       typedef TPair<KeyType, ValueType> ElementType;
+      public:
+        typedef TPair<KeyType, ValueType> ElementType;
 
-       protected:
-       TMapBase() = default;
-       TMapBase( TMapBase && ) = default;
-       TMapBase( const TMapBase & ) = default;
-       TMapBase &operator=( TMapBase && ) = default;
-       TMapBase &operator=( const TMapBase & ) = default;
+      protected:
+        TMapBase() = default;
+        TMapBase( TMapBase && ) = default;
+        TMapBase( const TMapBase & ) = default;
+        TMapBase &operator=( TMapBase && ) = default;
+        TMapBase &operator=( const TMapBase & ) = default;
 
-       protected:
-       typedef TSet<ElementType> ElementSetType;
+      protected:
+        typedef TSet<ElementType> ElementSetType;
 
-       /** A set of the key-value pairs in the map. */
-       ElementSetType Pairs;
-
+        /** A set of the key-value pairs in the map. */
+        ElementSetType Pairs;
 };
 
-template<typename InKeyType, typename InValueType>
-class TMap : TMapBase<InKeyType, InValueType>
-{
+template <typename InKeyType, typename InValueType>
+class TMap : TMapBase<InKeyType, InValueType> {
       public:
         typedef InKeyType KeyType;
         typedef InValueType ValueType;
@@ -1340,8 +942,7 @@ class TMap : TMapBase<InKeyType, InValueType>
         TMap &operator=( TMap && ) = default;
         TMap &operator=( const TMap & ) = default;
 
-        public:
-
+      public:
 };
 
 #define UE_PTRDIFF_TO_INT32( argument ) static_cast<int32>( argument )
@@ -1355,83 +956,66 @@ static FORCEINLINE int32 Strlen( const TCHAR *String ) {
 
 typedef TCHAR WIDECHAR;
 
-
-FORCEINLINE const typename TCHAR* Strstr( const TCHAR*String, const TCHAR*Find ) {
+FORCEINLINE const typename TCHAR *Strstr( const TCHAR *String,
+                                          const TCHAR *Find ) {
         return _tcsstr( String, Find );
 }
 
-class FString
-{
+static std::vector<std::string> SplitString( const std::string &input,
+                                             const char *delimiter,
+                                             size_t maxParts = 3 ) {
+        std::vector<std::string> parts;
+        size_t pos = 0;
+        size_t delimLen = std::strlen( delimiter );
+        size_t start = 0;
+
+        while ( ( pos = input.find( delimiter, start ) ) != std::string::npos &&
+                parts.size() < maxParts - 1 ) {
+                parts.emplace_back( input.substr( start, pos - start ) );
+                start = pos + delimLen;
+        }
+
+        parts.emplace_back( input.substr( start ) ); // Remainder
+        return parts;
+}
+
+class FString {
+
       private:
-        /** Array holding the character data */
-        typedef TArray<TCHAR> DataType;
+        typedef TArray<wchar_t> DataType;
         DataType Data;
 
       public:
-        using ElementType = TCHAR;
+        using ElementType = wchar_t;
 
-		FString() = default;
+        FString() = default;
         FString( FString && ) = default;
         FString( const FString & ) = default;
         FString &operator=( FString && ) = default;
         FString &operator=( const FString & ) = default;
 
-
-
-
-        /** Get the length of the string, excluding terminating character */
-        FORCEINLINE int32 Len() const {
-                return Data.Num() ? Data.Num() - 1 : 0;
-        }
-        
-        /**
-         * Tests if index is valid, i.e. greater than or equal to zero, and less
-         * than the number of characters in this string (excluding the null
-         * terminator).
-         *
-         * @param Index Index to test.
-         *
-         * @returns True if index is valid. False otherwise.
-         */
-        FORCEINLINE bool IsValidIndex( int32 Index ) const {
-                return Index >= 0 && Index < Len();
-        }
-
-        /**
-         * Get pointer to the string
-         *
-         * @Return Pointer to Array of TCHAR if Num, otherwise the empty string
-         */
-        FORCEINLINE const TCHAR *operator*() const {
-                return Data.Num() ? Data.GetData() : TEXT( "" );
-        }
-
-     public:
+      public:
         FString( const wchar_t *Str ) {
-               const uint32 Length = static_cast<uint32>( wcslen( Str ) );
-               Data.AddUninitialized( Length + 1 );
-               memcpy( Data.GetData(), Str,
-                      ( Length + 1 ) * sizeof( wchar_t ) );
+                const uint32 NullTerminatedLength =
+                    static_cast<uint32>( wcslen( Str ) + 0x1 );
+
+                Data.Data = ( const_cast<wchar_t *>( Str ) );
+                Data.ArrayNum = NullTerminatedLength;
+                Data.ArrayMax = NullTerminatedLength;
         }
-        
+
         FString( const std::string &Str )
-            : FString( std::wstring( Str.begin(), Str.end() )
-                           .c_str() )
-        {
-        }
-        
-        FString( const std::wstring &Str )
-            : FString( Str.c_str() )
-        {
-        }
+            : FString( std::wstring( Str.begin(), Str.end() ).c_str() ) {}
 
-     public:
+        FString( const std::wstring &Str ) : FString( Str.c_str() ) {}
+
+      public:
         std::string ToString() {
-               wchar_t *ProcessedData = Data.GetData();
-               std::wstring WideDataString( ProcessedData );
+                wchar_t *ProcessedData = Data.GetData();
+                std::wstring WideDataString( ProcessedData );
 
-               return std::string( WideDataString.begin(),
-                                   WideDataString.end() );
+                return std::string( WideDataString.begin(),
+                                    WideDataString.end() );
         }
 
         std::string ToString() const {
@@ -1442,65 +1026,93 @@ class FString
                                     WideDataString.end() );
         }
 
-       std::wstring ToWideString() {
-               wchar_t *ProcessedData = Data.GetData();
-               std::wstring WideDataString( ProcessedData );
+        std::wstring ToWideString() {
+                wchar_t *ProcessedData = Data.GetData();
+                std::wstring WideDataString( ProcessedData );
 
-               return WideDataString;
-       }
+                return WideDataString;
+        }
 
-       std::wstring ToWideString() const
-       {
-               const wchar_t *ProcessedData = Data.GetData();
-               std::wstring WideDataString( ProcessedData );
+        FORCEINLINE const TCHAR *operator*() const {
+                const wchar_t *t = L"";
+                return Data.Num() ? Data.GetData() : t;
+        }
 
-               return WideDataString;
-       }
+        bool operator!=( std::string &Other ) {
+                return this->ToString() != Other;
+        }
+        bool operator!=( std::wstring &Other ) {
+                return this->ToWideString() != Other;
+        }
+        bool operator!=( FString &Other ) {
+                return this->Data.Data != Other.Data.Data;
+        }
+        bool operator!=( const char *Other ) {
+                int result = std::strcmp( this->ToString().c_str(), Other );
+                return !!result;
+        }
+        bool operator!=( const wchar_t *Other ) {
+                int result = std::wcscmp( this->Data.Data, Other );
+                return !!result;
+        }
 
-       bool IsEmpty() const { 
-               bool bEmpty = ToWideString().empty();
-               return bEmpty;
-       }
+        bool operator==( std::string &Other ) {
+                return this->ToString() == Other;
+        }
+        bool operator==( std::wstring &Other ) {
+                return this->ToWideString() == Other;
+        }
+        bool operator==( FString &Other ) {
+                return this->Data.Data == Other.Data.Data;
+        }
+        bool operator==( const char *Other ) {
+                int result = std::strcmp( this->ToString().c_str(), Other );
+                return !result;
+        }
+        bool operator==( const wchar_t *Other ) {
+                int result = std::wcscmp( this->Data.Data, Other );
+                return !result;
+        }
 
-       bool operator==( FString &Other ) {
-               return this->Data.Data == Other.Data.Data;
-       }
+        friend std::ostream &operator<<( std::ostream &Stream, FString &Str ) {
+                return Stream << Str.ToString();
+        }
+        friend std::istream &operator>>( std::istream &Stream, FString &Str ) {
+                std::string string = Str.ToString();
+                return Stream >> string;
+        }
+        friend std::ostream &operator<<( std::ofstream &Stream, FString &Str ) {
+                return Stream << Str.ToString();
+        }
+        friend std::ostream &operator<<( std::ostream &Stream, FString Str ) {
+                return Stream << Str.ToString();
+        }
+        friend std::istream &operator>>( std::istream &Stream, FString Str ) {
+                std::string string = Str.ToString();
+                return Stream >> string;
+        }
+        friend std::ostream &operator<<( std::ofstream &Stream, FString Str ) {
+                return Stream << Str.ToString();
+        }
 
-       bool operator==( const FString &Other ) {
-               return this->Data.Data == Other.Data.Data;
-       }
+        void ParseIntoArray( std::vector<std::string> &OutArray,
+                             FString &Delimiter, bool bCullEmpty = true ) {
+                size_t Start = 0;
+                size_t End;
+                std::string Source = this->ToString();
+                std::string Delim = Delimiter.ToString();
 
-       bool operator==( const FString &Other ) const {
-               return this->Data.Data == Other.Data.Data;
-       }
+                UE_LOG( LogFortSDK, VeryVerbose, "Source: %s, Delim : %s",
+                        Source.c_str(), Delim.c_str() );
 
-       bool operator==( FString Other ) {
-               return this->Data.Data == Other.Data.Data;
-       }
-       
-       void ParseIntoArray( TArray<FString> &OutArray, const FString &Delimiter,
-                            bool bCullEmpty = true ) const {
-               size_t Start = 0;
-               size_t End;
-               const std::wstring &Source = ToWideString();
-               const std::wstring &Delim = Delimiter.ToWideString();
+                auto Dih = SplitString( Source, Delim.c_str() );
 
-               while ( ( End = Source.find( Delim, Start ) ) !=
-                       std::wstring::npos ) {
-                       std::wstring substractedstr =
-                           Source.substr( Start, End - Start );
-                       FString Token =
-                           FString( substractedstr );
-                       if ( !bCullEmpty || !Token.IsEmpty() )
-                               OutArray.Add( Token );
-                       Start = End + Delim.length();
-               }
-               std::wstring substr = Source.substr( Start );
-               FString LastToken = FString( substr );
-               if ( !bCullEmpty || !LastToken.IsEmpty() )
-                       OutArray.Add( LastToken );
-       }
+                if ( Dih.size() == 3 ) {
+                        for ( std::string Str : Dih ) {
+                                OutArray.push_back( Str );
+                        }
+                }
+        }
 };
 
-
-}
+}; // namespace SDK

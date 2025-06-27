@@ -209,27 +209,27 @@ bool SDK::Init() {
 
         logLibrary->Log_Internal( "TS: %s", TempString.ToString().c_str() );
 
-        TArray<FString> Parts;
-        const FString Test = L"-";
+        std::vector<std::string> Parts;
+        FString Test = L"-";
         TempString.ParseIntoArray( Parts, Test );
 
-        logLibrary->Log_Internal( "Parts: %d", Parts.Num() );
+        logLibrary->Log_Internal( "Parts: %d", Parts.size() );
 
-        for ( const auto &Part : Parts ) {
-                logLibrary->Log_Internal( "Part: %s", Part.ToString().c_str() );
+        for ( auto &Part : Parts ) {
+                logLibrary->Log_Internal( "Part: %s", Part.c_str() );
         }
 
         SDK::Engine_Version = 
-            FEngineVersion( Parts[0].ToString() );
+            FEngineVersion( Parts[0] );
         SDK::Fortnite_Version =
-            FFortniteVersion( Parts[2].ToString() );
+            FFortniteVersion( Parts[2] );
         
         logLibrary->Log_Internal(
             "EngineVersion: %s",
-            SDK::Engine_Version.ToString().ToString().c_str() );
+            SDK::Engine_Version.ToString().c_str() );
         logLibrary->Log_Internal(
             "FortniteVersion: %s",
-            SDK::Fortnite_Version.ToString().ToString().c_str() );
+            SDK::Fortnite_Version.ToString().c_str() );
 
         /*
         * ------------------------
