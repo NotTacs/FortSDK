@@ -1,6 +1,6 @@
 # FortSDK
 
-#Important Info Please Read:#
+# Important Info Please Read:
 
 
 TArray::GetData is what you should use for getting access into the array, never use iterators (for (const auto& Element : TArray)) unless your certain that your element type is a pointer.
